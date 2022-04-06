@@ -96,6 +96,9 @@ from simpletransformers.language_modeling.language_modeling_utils import (
     load_hf_dataset,
     mask_tokens,
 )
+# Add TPU support
+import torch_xla
+import torch_xla.core.xla_model as xm
 
 try:
     import wandb
@@ -177,10 +180,15 @@ class LanguageModelingModel:
             torch.distributed.init_process_group(backend="nccl")
             cuda_device = self.args.local_rank
 
-        if use_cuda:
+        # to use this add "use_tpu": True to  train_args 
+        if args['use_tpu']:
+            print('using TPU')
+            self.device = xm.xla_device()
+        elif use_cuda:
             if torch.cuda.is_available():
                 if cuda_device == -1:
                     self.device = torch.device("cuda")
+                    print('using GPU')
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
             else:
@@ -848,6 +856,8 @@ class LanguageModelingModel:
                     if args.fp16:
                         scaler.step(optimizer)
                         scaler.update()
+                    elif args['use_tpu']:
+                        xm.optimizer_step(optimizer, barrier=True)
                     else:
                         optimizer.step()
                     scheduler.step()  # Update learning rate schedule
