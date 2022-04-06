@@ -36,6 +36,7 @@ setup(
         "tokenizers",
         "wandb>=0.10.32",
         "streamlit",
+        "cloud-tpu-client",
         "sentencepiece",
     ],
 )
